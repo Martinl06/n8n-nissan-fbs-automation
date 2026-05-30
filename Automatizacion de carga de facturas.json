@@ -1,0 +1,187 @@
+{
+  "name": "Automatizacion de carga de facturas",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "8616afb4-8776-4cd8-be38-b85de02bd747",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "51b3b52d-42ab-4baf-b8f3-73dfcff2799b",
+      "name": "Webhook",
+      "webhookId": "8616afb4-8776-4cd8-be38-b85de02bd747"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Analiza el archivo binario adjunto que corresponde a una factura. Tu única tarea es extraer los datos del documento y devolverlos en un formato JSON estricto.\n\nEl JSON debe contener exactamente las siguientes llaves:\n\n\"proveedor\"\n\n\"cuit_nit\"\n\n\"nro_factura\"\n\n\"fecha_emision\"\n\n\"monto_neto\"\n\n\"impuestos\"\n\n\"monto_total\"\n\n\"patente\"",
+        "options": {
+          "systemMessage": "FACTURA COMERCIAL\nEmisor: Nissan Repuestos Globales S.A.\nIdentificación Fiscal / CUIT: 30-12345678-9\nFactura Nro: N-0004921-FBS\nFecha de Emisión: 2026-05-28\nPatente: AYB 735 \n\nDetalle: \n- 50x Pastillas de Freno Cerámicas Nissan Sentra\n- 10x Discos de Freno Ventilados Nissan Frontier\n\nSubtotal (Monto Neto): 4500.00 USD\nIVA / Impuestos (21%): 945.00 USD\nTOTAL A PAGAR: 5445.00 USD"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        192,
+        0
+      ],
+      "id": "c50a74a9-6d4c-46af-9bcc-fca6379f716c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        272,
+        224
+      ],
+      "id": "d9c9aa71-c395-4c28-87d3-19251307129b",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "QE66pZd4h6TayWYk",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://webhook.site/b0b58a23-e31a-485d-a424-064896aaeaf2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        768,
+        0
+      ],
+      "id": "7cf99eee-ed1a-4091-9583-1eb4ac016cdf",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=🚀 **Nueva Factura Cargada Automáticamente en Sistema FBS Nissan**\n\n• **Proveedor:** {{ $('Code ').item.json.proveedor }}\n• **Nro. Factura:** {{ $('Code ').item.json.nro_factura }}\n• **Fecha Emisión:** {{ $('Code ').item.json.fecha_emision }}\n• **Monto Total:** {{ $('Code ').item.json.monto_total }}\n• **Patente:** {{ $('Code ').item.json.patente }}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        992,
+        0
+      ],
+      "id": "440dfab5-85e2-4d47-8d3d-7748003e8380",
+      "name": "Discord",
+      "webhookId": "bdad9ad8-74e4-4781-b887-739785d7fce5",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "FLHm9pXXCM9OYzwn",
+          "name": "Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tomamos la salida de texto que nos genera el Agente de IA\nconst aiTextResponse = $json.output;\n\ntry {\n  // Convertimos ese texto en un objeto JSON nativo para n8n\n  const parsedData = JSON.parse(aiTextResponse);\n  \n  // Devolvemos el resultado estructurado\n  return [{ json: parsedData }];\n} catch (error) {\n  // En caso de que falle el parseo, devolvemos el error para no romper el flujo\n  return [{ json: { error: \"No se pudo formatear la respuesta de la IA\", raw: aiTextResponse } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        0
+      ],
+      "id": "bec3a236-7510-4e16-996c-5e535221018f",
+      "name": "Code "
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code ": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8c2c8c71-12c4-4988-b7bb-e07748b5442c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "aa856051c4b6f3493eebde2878582b09e6d246b3260c8cbe7182b096115f8ef7"
+  },
+  "id": "AspT603NBBjDokTq",
+  "tags": []
+}
